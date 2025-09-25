@@ -1,0 +1,27 @@
+# © 2024 SmartStartAI. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-SmartStartAI-Proprietary
+
+# ملفات أرشيف قديمة
+netlify/functions/_src_archive/**
+
+# ملفات البناء
+dist/
+build/
+.vite/
+
+# ملفات Node
+node_modules/
+
+# ملفات التكوين
+*.config.js
+*.config.ts
+vite.config.ts
+tailwind.config.js
+postcss.config.js
+
+# ملفات الاختبار المؤقتة
+**/*.test.ts
+**/*.spec.ts
+
+# ملفات مولدة
+src/vite-env.d.ts
