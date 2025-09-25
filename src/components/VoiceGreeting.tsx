@@ -32,7 +32,7 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
 
   useEffect(() => {
     // تحضير ملف الصوت
-    audioRef.current = new Audio("/sample-voice-ar.mp3");
+    audioRef.current = new Audio("/audio/gulf-greeting.mp3");
     audioRef.current.preload = "auto";
     
     // تحضير Web Speech API
@@ -85,7 +85,8 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
       
       audioRef.current.onerror = () => {
         setIsPlaying(false);
-        return false;
+        // Try Web Speech API as fallback
+        playWithWebSpeech();
       };
       
       setIsPlaying(true);
@@ -93,22 +94,61 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
       return true;
     } catch (error) {
       console.warn('Audio file playback failed:', error);
-      return false;
+      // Try Web Speech API as fallback
+      return await playWithWebSpeech();
     }
   };
 
   const playWithWebSpeech = async (): Promise<boolean> => {
-    if (!synthRef.current || !('speechSynthesis' in window)) return false;
+    // Check if speech synthesis is available
+    if (!('speechSynthesis' in window) || !synthRef.current) {
+      console.warn('Web Speech API not supported');
+      return false;
+    }
     
     try {
-      speechSynthesis.cancel(); // إيقاف أي تشغيل سابق
+      // Cancel any ongoing speech
+      speechSynthesis.cancel();
+      
+      // Ensure voices are loaded
+      const voices = speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // Wait for voices to load
+        await new Promise<void>((resolve) => {
+          speechSynthesis.onvoiceschanged = () => {
+            resolve();
+          };
+          // Timeout after 1 second
+          setTimeout(resolve, 1000);
+        });
+      }
+      
+      // Setup voice again after voices are loaded
+      const setupVoice = () => {
+        const voices = speechSynthesis.getVoices();
+        const preferredVoices = ["ar-SA", "ar-KW", "ar-QA", "ar-BH", "ar-OM", "ar-AE", "ar"];
+        
+        const selectedVoice = voices.find(voice => 
+          preferredVoices.some(lang => voice.lang.startsWith(lang))
+        );
+        
+        if (selectedVoice && synthRef.current) {
+          synthRef.current.voice = selectedVoice;
+          synthRef.current.rate = 0.9;
+          synthRef.current.pitch = 1.0;
+          synthRef.current.volume = 1.0;
+        }
+      };
+      
+      setupVoice();
       
       synthRef.current.onend = () => {
         setIsPlaying(false);
         setShowQuickActions(true);
       };
       
-      synthRef.current.onerror = () => {
+      synthRef.current.onerror = (event) => {
+        console.warn('Web Speech API error:', event);
         setIsPlaying(false);
         toast.error('خطأ في تشغيل الصوت');
       };
@@ -119,6 +159,7 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
       return true;
     } catch (error) {
       console.warn('Web Speech API failed:', error);
+      toast.error('لا يمكن تشغيل الصوت، سنعرض الخيارات مباشرة');
       return false;
     }
   };

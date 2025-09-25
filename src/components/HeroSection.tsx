@@ -47,6 +47,16 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onStartVoice, onStartText, is
 
   return (
     <section className={`relative ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-gray-800/30 to-gray-900' : 'bg-gradient-to-br from-white via-saudi-neutral/30 to-white'} py-20 px-4 overflow-hidden`}>
+      {/* Background image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-60 z-10" // Changed opacity from 20 to 40
+        style={{ 
+          backgroundImage: "url('/images/dacefb94-ffa0-4558-a87d-b29d00f60314-1 copy.png')",
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          filter: 'contrast(1.5) brightness(1)' // Added filter to enhance visibility
+        }}
+      ></div>
       
       <div className="max-w-7xl mx-auto text-center relative z-20">
         {/* العنوان المختصر والقوي */}
@@ -62,16 +72,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onStartVoice, onStartText, is
             transition={{ duration: 0.5 }}
             className="text-center mb-6"
           >
-            <picture>
-              <source srcSet="/brand/logo-512.webp" type="image/webp" />
-              <img
-                src="/brand/logo-512.png"
-                alt="SmartStartAI — شعار"
-                width={256} height={256}
-                className="mx-auto h-32 w-32 md:h-40 md:w-40 drop-shadow-lg"
-                loading="eager" decoding="async"
-              />
-            </picture>
+            {/* Background image will be displayed behind the content */}
             <h1 className="text-5xl md:text-7xl font-almarai font-bold text-transparent bg-clip-text bg-gradient-to-l from-saudi-green to-saudi-gold mt-4">
               SmartStartAI
             </h1>

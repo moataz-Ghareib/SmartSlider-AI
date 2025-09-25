@@ -99,27 +99,6 @@ const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  // SVG Logo component
-  const SmartStartAILogo = () => (
-    <svg width="40" height="40" viewBox="0 0 40 40" className="h-10 w-10 rounded-xl shadow-sm">
-      <rect width="40" height="40" rx="8" fill="url(#logoGradient)" />
-      <path 
-        d="M12 12 L20 28 L28 12" 
-        stroke="white" 
-        strokeWidth="2" 
-        fill="none" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-      <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#007A3D" />
-          <stop offset="100%" stopColor="#B38E5D" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
-
   return (
     <header className={`${isDarkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white/95 border-gray-100'} backdrop-blur-md shadow-sm border-b sticky top-0 z-50`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -134,14 +113,17 @@ const Header: React.FC<HeaderProps> = ({
             </button>
             
             <div className="cursor-pointer flex items-center gap-3" onClick={() => onViewChange('home')}>
-              <SmartStartAILogo />
+              {/* Replace SVG logo with PNG logo */}
+              <img 
+                src="/smartstartai_final_logo.png" 
+                alt="SmartStartAI Logo" 
+                className="h-10 w-10 rounded-xl shadow-sm"
+              />
               <div>
                 <h1 className={`text-xl font-almarai font-bold text-transparent bg-clip-text bg-gradient-to-l from-saudi-green to-saudi-gold`}>
                   SmartStartAI
                 </h1>
-                <p className={`text-xs font-almarai ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} hidden sm:block`}>
-                  مستشارك الذكي بصوتٍ سعودي
-                </p>
+                
               </div>
             </div>
           </div>
