@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home, Bug, Mail, Phone, Copy } from 'lucide-react';
-import { errorReporting } from '../utils/errorReporting';
+import { errorReporting } from '@/utils/errorReporting';
 
 interface Props {
   children: ReactNode;

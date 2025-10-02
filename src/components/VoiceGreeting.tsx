@@ -32,8 +32,10 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
 
   useEffect(() => {
     // تحضير ملف الصوت
-    audioRef.current = new Audio("/audio/gulf-greeting.mp3");
-    audioRef.current.preload = "auto";
+    // استخدم ملف صوتي بديل لتفادي أخطاء 416 على بعض البيئات
+    audioRef.current = new Audio("/sample-voice-ar.mp3");
+    // تقليل مشاكل Range 416 في بعض الخوادم بإيقاف التحميل المسبق الكامل
+    audioRef.current.preload = "metadata";
     
     // تحضير Web Speech API
     if ('speechSynthesis' in window) {
@@ -71,10 +73,37 @@ const VoiceGreeting: React.FC<VoiceGreetingProps> = ({ onActionSelect }) => {
     };
   }, []);
 
+  const waitForCanPlay = (audio: HTMLAudioElement) =>
+    new Promise<void>((resolve, reject) => {
+      const onReady = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error('audio error'));
+      };
+      const cleanup = () => {
+        audio.removeEventListener('canplay', onReady);
+        audio.removeEventListener('canplaythrough', onReady);
+        audio.removeEventListener('error', onError);
+      };
+      if (audio.readyState >= 2) {
+        resolve();
+      } else {
+        audio.addEventListener('canplay', onReady, { once: true });
+        audio.addEventListener('canplaythrough', onReady, { once: true });
+        audio.addEventListener('error', onError, { once: true });
+        audio.load();
+      }
+    });
+
   const playWithAudioFile = async (): Promise<boolean> => {
     if (!audioRef.current) return false;
     
     try {
+      // انتظر حتى يصبح الملف قابلاً للتشغيل قبل البدء
+      await waitForCanPlay(audioRef.current);
       audioRef.current.currentTime = 0;
       await audioRef.current.play();
       

@@ -3,7 +3,7 @@ import { X, Mail, Lock, User, Phone, Eye, EyeOff, CheckCircle, AlertTriangle, Sh
 import { useForm, FieldErrors } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { loginSchema, registerSchema } from '../utils/validation';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as yup from 'yup';
 
@@ -24,7 +24,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signUp, signIn, loading } = useAuth();
+  const { signUp, signIn, signInWithGoogle, signInWithApple, loading } = useAuthStore();
 
   // Login form
   const loginForm = useForm<LoginFormData>({
@@ -423,8 +423,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                     </>
                   )}
 
-                  {/* أزرار التسجيل الاجتماعي - معطلة مؤقتاً */}
-                  {/* <motion.div
+                  {/* أزرار التسجيل الاجتماعي */}
+                  <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
@@ -472,7 +472,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                         {mode === 'login' ? 'دخول عبر Apple' : 'تسجيل عبر Apple'}
                       </motion.button>
                     </div>
-                  </motion.div> */}
+                  </motion.div>
 
                   <motion.button
                     type="submit"

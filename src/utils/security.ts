@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import toast from 'react-hot-toast';
 
 const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'smartstart-ai-default-key-2025';
 
@@ -38,7 +39,7 @@ export class SecurityUtils {
   }
 
   // التحقق من قوة كلمة المرور
-  static validatePassword(password: string): {
+  static validatePassword(_password: string): {
     isValid: boolean;
     score: number;
     feedback: string[];
@@ -240,26 +241,32 @@ export class RateLimiter {
 // Content Security Policy
 export class CSPManager {
   static setupCSP() {
-    // إعداد Content Security Policy للحماية من XSS
+    // لا تقم بإنشاء/استبدال CSP إذا كان هناك وسم CSP موجود مسبقاً (مثل الموجود في index.html)
+    const existing = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    if (existing) {
+      return;
+    }
+
+    // إعداد Content Security Policy افتراضي يشمل نطاقات Firebase عند عدم توفر وسم مسبق
     const meta = document.createElement('meta');
     meta.httpEquiv = 'Content-Security-Policy';
     meta.content = `
       default-src 'self';
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
+      connect-src 'self' https://firebase.googleapis.com https://www.googleapis.com https://firestore.googleapis.com https://firebaseinstallations.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://firebasestorage.googleapis.com https://*.firebasestorage.app;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://www.googletagmanager.com https://apis.google.com;
       img-src 'self' data: https: blob:;
-      connect-src 'self';
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com data:;
+      frame-src 'self' https://apis.google.com https://accounts.google.com https://*.firebaseapp.com;
       media-src 'self' blob:;
     `.replace(/\s+/g, ' ').trim();
-    
+
     document.head.appendChild(meta);
   }
 }
 
 // Session Management
 export class SessionManager {
-  private static readonly SESSION_KEY = 'smartstart_session';
   private static readonly MAX_IDLE_TIME = 30 * 60 * 1000; // 30 دقيقة
 
   static startSessionMonitoring() {

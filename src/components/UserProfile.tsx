@@ -29,7 +29,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -49,7 +49,7 @@ const UserProfile: React.FC = () => {
     confirm: false
   });
 
-  const { user, updateProfile, signOut } = useAuth();
+  const { user, updateProfile, signOut } = useAuthStore();
 
   const [userInfo, setUserInfo] = useState({
     name: user?.name || '',
@@ -457,13 +457,15 @@ const UserProfile: React.FC = () => {
           <div className="flex flex-col lg:flex-row items-center gap-8">
             {/* صورة المستخدم */}
             <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-r from-saudi-green to-saudi-gold rounded-full flex items-center justify-center text-6xl">
-                👨‍💼
+              <div 
+                className="w-32 h-32 bg-gradient-to-r from-saudi-green to-saudi-gold rounded-full flex items-center justify-center text-6xl cursor-pointer"
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     window.location.hash = 'profile';
                   }
                 }}
+              >
+                👨‍💼
               </div>
               <button className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow">
                 <Camera className="h-5 w-5 text-gray-600" />

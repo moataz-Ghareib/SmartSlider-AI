@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Download, FileText, BarChart3, Presentation, Database, CheckCircle, Clock, DollarSign, Users, Target, Zap, Star, Award, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ServiceDepartment, ServicePackage, ServiceRequest } from '../types/services';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import toast from 'react-hot-toast';
 
 interface ServicePackagesModalProps {
@@ -22,7 +22,7 @@ const ServicePackagesModal: React.FC<ServicePackagesModalProps> = ({
   const [showInputForm, setShowInputForm] = useState(false);
   const [inputs, setInputs] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   const getPackageIcon = (level: string) => {
     switch (level) {

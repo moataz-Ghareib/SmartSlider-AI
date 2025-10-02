@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, CheckCircle, AlertTriangle, Info, Star, Calendar, Eye, Trash2, Settings, Filter, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import toast from 'react-hot-toast';
 
 interface Notification {
@@ -30,7 +30,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   // تحميل الإشعارات عند فتح المركز
   useEffect(() => {

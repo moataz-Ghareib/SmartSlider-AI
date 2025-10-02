@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
-import AuthProvider from './components/AuthProvider';
 import { Suspense, lazy } from 'react';
-import { useAuth } from './hooks/useAuth';
 import { Project, Analysis } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore, useProjectsStore, useAnalysisStore, useUIStore } from './stores';
 
 const Header = lazy(() => import('./components/Header'));
 const HeroSection = lazy(() => import('./components/HeroSection'));
@@ -26,7 +25,7 @@ const UserProfile = lazy(() => import('./components/UserProfile'));
 const NotificationCenter = lazy(() => import('./components/NotificationCenter'));
 const LoadingScreen = lazy(() => import('./components/LoadingScreen'));
 const Footer = lazy(() => import('./components/Footer'));
-const ErrorBoundary = lazy(() => import('./components/ErrorBoundary'));
+import ErrorBoundary from './components/ErrorBoundary';
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const AdminRoute = lazy(() => import('./components/AdminRoute'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
@@ -36,24 +35,36 @@ const SectorPage = lazy(() => import('./components/SectorPage'));
 const LocationAnalysisPage = lazy(() => import('./components/LocationAnalysisPage'));
 const BlogIndex = lazy(() => import('./components/BlogIndex'));
 const BlogPostPage = lazy(() => import('./components/BlogPostPage'));
-
-type ViewType = 'home' | 'flow' | 'dashboard' | 'results' | 'pricing' | 'help' | 'profile' | 'admin' | 'sector' | 'location-analysis' | 'blog' | 'post';
+const AcademyPage = lazy(() => import('./components/AcademyPage'));
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<ViewType>('home');
-  const [selectedSector, setSelectedSector] = useState<string>('');
-  const [selectedBlogPost, setSelectedBlogPost] = useState<string>('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // Zustand stores
+  const { user, loading } = useAuthStore();
+  const { projects } = useProjectsStore();
+  const { currentAnalysis } = useAnalysisStore();
+  const {
+    currentView,
+    selectedSector,
+    selectedBlogPost,
+    isMenuOpen,
+    isAuthModalOpen,
+    isNotificationOpen,
+    isPrivacyModalOpen,
+    isDarkMode,
+    isLoading,
+    loadingProgress,
+    isOnline,
+    setCurrentView,
+    setSelectedSector,
+    setSelectedBlogPost,
+    setMenuOpen,
+    setAuthModalOpen,
+    setNotificationOpen,
+    setPrivacyModalOpen,
+    setDarkMode
+  } = useUIStore();
+
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // Enable dark mode by default
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  
-  const { user, loading } = useAuth();
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -64,7 +75,8 @@ function AppContent() {
     }
   }, [isDarkMode]);
 
-  const [projects, setProjects] = useState<Project[]>([
+  // Sample projects data - will be replaced with real data from store
+  const sampleProjects: Project[] = [
     {
       id: '1',
       title: 'تطبيق توصيل طعام صحي',
@@ -95,7 +107,7 @@ function AppContent() {
       status: 'saved',
       createdAt: new Date('2024-02-01')
     }
-  ]);
+  ];
 
   const sampleAnalysis: Analysis = {
     feasibility: {
@@ -110,21 +122,19 @@ function AppContent() {
       platforms: 'المنصات الرئيسية: سناب شات (الأولوية العليا للجمهور السعودي)، انستقرام (للمحتوى المرئي)، تيك توك (للجيل الجديد)، تويتر (للتفاعل المباشر). المنصات الثانوية: يوتيوب (للمحتوى التعليمي)، لينكد إن (للشراكات B2B)، واتساب بزنس (لخدمة العملاء).'
     },
     financial: {
-      revenue: 'نموذج الإيرادات متنوع: (1) عمولة على كل طلب 15-20%، (2) رسوم التوصيل 8-12 ريال، (3) اشتراكات شهرية مميزة 29 ريال، (4) إعلانات المطاعم الشريكة، (5) بيع البيانات التحليلية للمطاعم. الإيرادات المتوقعة: الشهر الأول 45,000 ريال، نهاية السنة الأولى 120,000 ريال شهرياً.',
-      expenses: 'التكاليف التشغيلية الشهرية: رواتب الفريق (35,000 ريال)، تسويق رقمي (25,000 ريال)، خوادم وتقنية (8,000 ريال)، مكتب وإدارة (7,000 ريال)، تأمين ومصاريف قانونية (5,000 ريال)، احتياطي طوارئ (5,000 ريال). إجمالي التكاليف الشهرية: 85,000 ريال.',
-      funding: 'خطة التمويل على مراحل: المرحلة الأولى (750,000 ريال) من المؤسسين والأصدقاء، المرحلة الثانية (2 مليون ريال) من مستثمرين ملائكة بعد 12 شهر، المرحلة الثالثة (8 مليون ريال) من صناديق رأس المال الجريء بعد 24 شهر. البدائل: قروض بنكية، برامج دعم حكومية، شراكات استراتيجية.'
+      cashFlow: 'نموذج الإيرادات متنوع: (1) عمولة على كل طلب 15-20%، (2) رسوم التوصيل 8-12 ريال، (3) اشتراكات شهرية مميزة 29 ريال، (4) إعلانات المطاعم الشريكة، (5) بيع البيانات التحليلية للمطاعم. الإيرادات المتوقعة: الشهر الأول 45,000 ريال، نهاية السنة الأولى 120,000 ريال شهرياً.',
+      breakeven: 'التكاليف التشغيلية الشهرية: رواتب الفريق (35,000 ريال)، تسويق رقمي (25,000 ريال)، خوادم وتقنية (8,000 ريال)، مكتب وإدارة (7,000 ريال)، تأمين ومصاريف قانونية (5,000 ريال)، احتياطي طوارئ (5,000 ريال). إجمالي التكاليف الشهرية: 85,000 ريال.'
     },
-    risks: {
-      technical: 'المخاطر التقنية: أعطال الخوادم (احتمالية 15%)، مشاكل أمان البيانات (10%)، صعوبات التكامل مع أنظمة المطاعم (25%)، بطء في الأداء أثناء الذروة (20%). خطط التخفيف: خوادم احتياطية، تشفير متقدم، فريق دعم تقني 24/7، اختبارات دورية للأداء.',
-      market: 'مخاطر السوق: دخول منافسين كبار (احتمالية 40%)، تغيير سلوك المستهلكين (25%)، ركود اقتصادي (15%)، تغييرات تنظيمية (20%). استراتيجيات المواجهة: التركيز على الجودة والخدمة، تنويع الخدمات، بناء قاعدة عملاء مخلصة، مراقبة السوق المستمرة.',
-      financial: 'المخاطر المالية: تأخير في الحصول على التمويل (30%)، ارتفاع التكاليف التشغيلية (35%)، انخفاض الإيرادات المتوقعة (25%)، مشاكل في التدفق النقدي (20%). خطط الطوارئ: تقليل النفقات غير الأساسية، البحث عن مصادر تمويل بديلة، إعادة تقييم نموذج الأعمال، بناء احتياطي نقدي.'
+    esg: {
+      sustainability: 'الاستدامة البيئية: استخدام مواد صديقة للبيئة، تقليل النفايات، استخدام الطاقة المتجددة.',
+      social: 'الأثر الاجتماعي: توفير فرص عمل للشباب، دعم الموردين المحليين، المساهمة في التنمية المجتمعية.'
     }
   };
 
   // Event handlers
   const handleStartVoice = () => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      setAuthModalOpen(true);
       return;
     }
     setCurrentView('flow');
@@ -132,18 +142,18 @@ function AppContent() {
 
   const handleStartText = () => {
     if (!user) {
-      setIsAuthModalOpen(true);
+      setAuthModalOpen(true);
       return;
     }
     setCurrentView('flow');
   };
 
-  const handleProjectSelect = (project: Project) => {
+  const handleProjectSelect = () => {
     setCurrentView('results');
   };
 
   const handleAuthSuccess = () => {
-    setIsAuthModalOpen(false);
+    setAuthModalOpen(false);
     toast.success('تم تسجيل الدخول بنجاح!');
   };
 
@@ -182,13 +192,13 @@ function AppContent() {
       case 'dashboard':
         return (
           <ProtectedRoute>
-            <Dashboard projects={projects} onProjectSelect={handleProjectSelect} />
+            <Dashboard projects={projects.length > 0 ? projects : sampleProjects} onProjectSelect={handleProjectSelect} />
           </ProtectedRoute>
         );
       case 'results':
         return (
           <ProtectedRoute>
-            <AnalysisResults analysis={sampleAnalysis} projectTitle="تطبيق توصيل طعام صحي" />
+            <AnalysisResults analysis={currentAnalysis || sampleAnalysis} projectTitle="تطبيق توصيل طعام صحي" />
           </ProtectedRoute>
         );
       case 'pricing':
@@ -219,6 +229,8 @@ function AppContent() {
         return <BlogIndex onOpenPost={handleBlogPostSelect} />;
       case 'post':
         return <BlogPostPage slug={selectedBlogPost} onBack={() => setCurrentView('blog')} />;
+      case 'academy':
+        return <AcademyPage onBack={() => setCurrentView('home')} />;
       default:
         return (
           <>
@@ -230,7 +242,7 @@ function AppContent() {
             <FeaturesSection isDarkMode={isDarkMode} />
             <VoiceInteractionSection isDarkMode={isDarkMode} />
             <HowItWorksSection isDarkMode={isDarkMode} />
-            <SolutionsSection onSectorSelect={handleSectorSelect} isDarkMode={isDarkMode} />
+            <SolutionsSection isDarkMode={isDarkMode} />
             <SectorsSection onSectorSelect={handleSectorSelect} isDarkMode={isDarkMode} />
             <TrustSection isDarkMode={isDarkMode} />
           </>
@@ -289,12 +301,12 @@ function AppContent() {
           {/* الهيدر */}
           <Header
             currentView={currentView}
-            onViewChange={setCurrentView}
-            onMenuToggle={() => setIsMenuOpen(!isMenuOpen)}
-            onAuthModalOpen={() => setIsAuthModalOpen(true)}
-            onNotificationOpen={() => setIsNotificationOpen(true)}
+            onViewChange={(view) => setCurrentView(view as any)}
+            onMenuToggle={() => setMenuOpen(!isMenuOpen)}
+            onAuthModalOpen={() => setAuthModalOpen(true)}
+            onNotificationOpen={() => setNotificationOpen(true)}
             isDarkMode={isDarkMode}
-            onDarkModeToggle={() => setIsDarkMode(!isDarkMode)}
+            onDarkModeToggle={() => setDarkMode(!isDarkMode)}
           />
 
           {/* المحتوى الرئيسي */}
@@ -306,12 +318,12 @@ function AppContent() {
           <Footer isDarkMode={isDarkMode} />
 
           {/* الأزرار العائمة */}
-          <VoiceButton />
+          <VoiceButton onVoiceInput={() => {}} />
 
           {/* النوافذ المنبثقة */}
           <AuthModal
             isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
+            onClose={() => setAuthModalOpen(false)}
             mode={authMode}
             onModeChange={setAuthMode}
             onSuccess={handleAuthSuccess}
@@ -319,12 +331,12 @@ function AppContent() {
 
           <NotificationCenter
             isOpen={isNotificationOpen}
-            onClose={() => setIsNotificationOpen(false)}
+            onClose={() => setNotificationOpen(false)}
           />
 
           <DataPrivacyModal
             isOpen={isPrivacyModalOpen}
-            onClose={() => setIsPrivacyModalOpen(false)}
+            onClose={() => setPrivacyModalOpen(false)}
           />
 
           {/* Toast notifications */}
@@ -358,11 +370,7 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 }
 
 export default App;

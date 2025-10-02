@@ -28,9 +28,15 @@ export default defineConfig(async () => {
             vendor: ['js-cookie', 'gray-matter', 'marked', 'yup', 'zod'],
             motion: ['framer-motion'],
             icons: ['lucide-react'],
+            zustand: ['zustand'],
           }
         }
       }
+    },
+    // إعدادات للتطوير المحلي
+    server: {
+      port: 3000,
+      open: true
     }
   }
 })

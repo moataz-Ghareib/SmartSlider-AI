@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import LoadingScreen from './LoadingScreen';
 
 interface ProtectedRouteProps {
@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, fallback }) => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthStore();
 
   if (loading) {
     return <LoadingScreen message="جاري التحقق من الهوية..." />;

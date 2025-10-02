@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, User, Settings, Bell, Search, LogIn, ChevronDown, LogOut, Shield, BarChart3 } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
+import { useUIStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
 import DarkModeToggle from './DarkModeToggle';
 import VoicePersistentToggle from './VoicePersistentToggle';
@@ -28,16 +29,15 @@ const Header: React.FC<HeaderProps> = ({
   const [notificationCount] = useState(3);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [voiceEnabled, setVoiceEnabled] = useState(() => 
-    localStorage.getItem('ssai_voice_enabled') !== 'false'
-  );
-  const { user, signOut } = useAuth();
+  const { voiceEnabled, toggleVoiceEnabled } = useUIStore();
+  const { user, signOut } = useAuthStore();
 
   const navItems = [
     { id: 'home', label: 'الرئيسية', active: currentView === 'home' },
     { id: 'flow', label: 'بدء مشروع', active: currentView === 'flow' },
     { id: 'dashboard', label: 'مشاريعي', active: currentView === 'dashboard', requireAuth: true },
     { id: 'pricing', label: 'التسعير', active: currentView === 'pricing' },
+    { id: 'academy', label: 'الأكاديمية', active: currentView === 'academy' },
     { id: 'help', label: 'المساعدة', active: currentView === 'help' }
   ];
 
@@ -63,18 +63,11 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const toggleVoice = async () => {
-    const newPreference = !voiceEnabled;
-    setVoiceEnabled(newPreference);
-    localStorage.setItem('ssai_voice_enabled', newPreference.toString());
-    
-    if (!newPreference && 'speechSynthesis' in window) {
-      speechSynthesis.cancel();
-    }
-    
-    // تتبع تغيير إعدادات الصوت
+    const next = !voiceEnabled;
+    toggleVoiceEnabled();
     try {
       const { analytics } = await import('../lib/analytics');
-      analytics.trackVoiceToggle(newPreference);
+      analytics.trackVoiceToggle(next);
     } catch (error) {
       console.warn('Analytics tracking failed:', error);
     }
@@ -304,13 +297,28 @@ const Header: React.FC<HeaderProps> = ({
                         { id: 'profile', label: 'الملف الشخصي', icon: User },
                         { id: 'dashboard', label: 'مشاريعي', icon: BarChart3 },
                         { id: 'settings', label: 'الإعدادات', icon: Settings },
-                        ...(user?.subscription_type === 'enterprise' || user?.email?.includes('admin') ? 
+                        ...(user?.role === 'admin' || user?.subscription_type === 'enterprise' || user?.email?.includes('admin') ? 
                           [{ id: 'admin', label: 'لوحة الأدمن', icon: Shield }] : [])
                       ].map((item) => (
                         <button
                           key={item.id}
                           onClick={() => {
-                            onViewChange('profile');
+                            // توجيه حسب العنصر المختار في قائمة المستخدم
+                            switch (item.id) {
+                              case 'admin':
+                                onViewChange('admin');
+                                break;
+                              case 'dashboard':
+                                onViewChange('dashboard');
+                                break;
+                              case 'settings':
+                                onViewChange('profile');
+                                break;
+                              case 'profile':
+                              default:
+                                onViewChange('profile');
+                                break;
+                            }
                             setShowUserMenu(false);
                           }}
                           className="w-full px-4 py-3 text-right font-almarai hover:bg-gray-50 transition-colors flex items-center gap-3"

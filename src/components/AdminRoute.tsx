@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import LoadingScreen from './LoadingScreen';
 import { Shield } from 'lucide-react';
 
@@ -9,14 +9,15 @@ interface AdminRouteProps {
 }
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children, fallback }) => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthStore();
 
   if (loading) {
     return <LoadingScreen message="جاري التحقق من صلاحيات الأدمن..." />;
   }
 
   // التحقق من صلاحيات الأدمن
-  const isAdmin = user?.subscription_type === 'enterprise' || 
+  const isAdmin = user?.role === 'admin' ||
+                  user?.subscription_type === 'enterprise' || 
                   user?.email?.includes('admin') ||
                   user?.email?.includes('support');
 

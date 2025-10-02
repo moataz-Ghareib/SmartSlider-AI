@@ -57,7 +57,7 @@ import {
   Area
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import toast from 'react-hot-toast';
 
 const AdminDashboard: React.FC = () => {
@@ -75,7 +75,7 @@ const AdminDashboard: React.FC = () => {
     revenue: 2847392,
     growth: 24.5
   });
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   // بيانات وهمية للعرض التوضيحي
   const systemStats = {
@@ -174,7 +174,8 @@ const AdminDashboard: React.FC = () => {
   ];
 
   // التحقق من صلاحيات الأدمن
-  const isAdmin = user?.subscription_type === 'enterprise' || 
+  const isAdmin = user?.role === 'admin' ||
+                  user?.subscription_type === 'enterprise' || 
                   user?.email?.includes('admin') || 
                   user?.email?.includes('support') ||
                   user?.email === 'admin@smartstart.sa' ||

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Check, Mic, FileText, Save, Loader, AlertCircle, CheckCircle, Info, Target, DollarSign } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -33,7 +33,7 @@ const ProjectFlow: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   // بيانات الخريطة والموقع
   const [locationData, setLocationData] = useState<any>(null);

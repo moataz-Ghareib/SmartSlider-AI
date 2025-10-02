@@ -45,7 +45,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { useAuth } from '../hooks/useAuth';
+import { useAuthStore } from '../stores';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -63,7 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects: initialProjects, onProj
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'status'>('date');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const { user } = useAuth();
+  const { user } = useAuthStore();
 
   // تحديث المشاريع عند تغيير المستخدم
   useEffect(() => {

@@ -1,6 +1,6 @@
-// Supabase removed - using localStorage for demo
+// Local Storage API Service - No Backend Required
 import toast from 'react-hot-toast';
-import { SecurityUtils, apiRateLimiter } from '../utils/security';
+import { SecurityUtils } from '../utils/security';
 
 export interface VoiceChatRequest {
   audioFile: File;
@@ -33,106 +33,32 @@ export interface BusinessPlanRequest {
 }
 
 class APIService {
-  private baseURL = import.meta.env.VITE_API_BASE || 'https://smartstartai-backend-production.up.railway.app';
   private requestQueue: Map<string, Promise<any>> = new Map();
 
-  private async makeRequest(url: string, options: RequestInit = {}) {
-    // التحقق من Rate Limiting
-    const clientId = await this.getClientId();
-    if (!apiRateLimiter.isAllowed(clientId)) {
-      throw new Error('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
-    }
-
-    // إضافة headers الأمان
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-Client-Version': '1.0.0',
-      'X-Request-ID': SecurityUtils.generateSessionToken(),
-      ...options.headers
-    };
-
-    // إضافة token المصادقة
-    const authToken = await this.getAuthToken();
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-
-    const response = await fetch(`${this.baseURL}${url}`, {
-      ...options,
-      headers
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  }
-
-  private async getClientId(): Promise<string> {
-    // استخدام معرف فريد للعميل للـ rate limiting
-    let clientId = localStorage.getItem('client_id');
-    if (!clientId) {
-      clientId = SecurityUtils.generateSessionToken();
-      localStorage.setItem('client_id', clientId);
-    }
-    return clientId;
-  }
-
+  // Voice Chat - محاكاة مع localStorage
   async voiceChat(request: VoiceChatRequest) {
     try {
-      // التحقق من حجم الملف
-      if (request.audioFile.size > 10 * 1024 * 1024) { // 10MB
-        throw new Error('حجم الملف الصوتي كبير جداً');
-      }
-
-      // التحقق من نوع الملف
-      const allowedTypes = ['audio/webm', 'audio/webm;codecs=opus', 'audio/wav', 'audio/mp3', 'audio/m4a'];
-      if (!allowedTypes.includes(request.audioFile.type)) {
-        throw new Error('نوع الملف الصوتي غير مدعوم');
-      }
-
-      // إرسال الملف الصوتي إلى Netlify Functions
-      const formData = new FormData();
-      formData.append('audioFile', request.audioFile);
-      if (request.sessionId) {
-        formData.append('session_id', request.sessionId);
-      }
-
-      const authToken = await this.getAuthToken();
-      const headers: Record<string, string> = {
-        'X-Client-Version': '1.0.0',
-        'X-Request-ID': SecurityUtils.generateSessionToken(),
-      };
-
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-
-      const response = await fetch(`${this.baseURL}/stt`, {
-        method: 'POST',
-        headers,
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      // محاكاة معالجة الصوت
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // تسجيل النشاط
-      this.logActivity('voice_chat', { sessionId: request.sessionId });
+      // حفظ المحادثة في localStorage
+      const conversation = {
+        id: `conv_${Date.now()}`,
+        type: 'voice',
+        message: 'رسالة صوتية محولة إلى نص',
+        timestamp: new Date().toISOString(),
+        sessionId: request.sessionId || 'default'
+      };
+      
+      this.saveConversation(conversation);
       
       return {
         success: true,
-        user_text: result.text || '',
-        assistant_text: 'تم تحويل الصوت بنجاح',
+        user_text: 'رسالة صوتية محولة إلى نص',
+        assistant_text: 'تم استلام رسالتك الصوتية بنجاح. كيف يمكنني مساعدتك؟',
         session_id: request.sessionId || 'default',
-        model_used: 'whisper',
-        processing_time: 0
+        model_used: 'local_voice',
+        processing_time: 1000
       };
     } catch (error) {
       console.error('Voice chat error:', error);
@@ -141,42 +67,36 @@ class APIService {
     }
   }
 
+  // Text Chat - محاكاة مع localStorage
   async textChat(request: TextChatRequest) {
     try {
       // تنظيف النص من المحتوى الضار
       const sanitizedMessage = SecurityUtils.sanitizeInput(request.message);
       
-      // إرسال الرسالة إلى Netlify Functions
-      const response = await fetch(`${this.baseURL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Client-Version': '1.0.0',
-        },
-        body: JSON.stringify({
-          text: sanitizedMessage
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
-
-      const responseData = await response.json();
+      // محاكاة معالجة النص
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const result = {
-        success: true,
-        response: responseData.text || 'عذراً، لم أتمكن من فهم طلبك',
-        session_id: request.sessionId || 'default',
-        model_used: 'hoor',
-        processing_time: 0
+      // حفظ المحادثة في localStorage
+      const conversation = {
+        id: `conv_${Date.now()}`,
+        type: 'text',
+        message: sanitizedMessage,
+        timestamp: new Date().toISOString(),
+        sessionId: request.sessionId || 'default'
       };
-
-      // تسجيل النشاط
-      this.logActivity('text_chat', { sessionId: request.sessionId });
       
-      return result;
+      this.saveConversation(conversation);
+      
+      // إجابة ذكية بناءً على المحتوى
+      const response = this.generateSmartResponse(sanitizedMessage);
+      
+      return {
+        success: true,
+        response: response,
+        session_id: request.sessionId || 'default',
+        model_used: 'local_ai',
+        processing_time: 500
+      };
     } catch (error) {
       console.error('Text chat error:', error);
       toast.error('خطأ في المحادثة النصية');
@@ -184,51 +104,68 @@ class APIService {
     }
   }
 
+  // Generate Business Plan - محاكاة مع localStorage
   async generateBusinessPlan(request: BusinessPlanRequest) {
     try {
       // التحقق من صحة البيانات
       this.validateBusinessPlanRequest(request);
 
-      // استخدام العقل المركزي الجديد
-      const response = await fetch('/api/brain', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      // محاكاة إنتاج دراسة الجدوى
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const planId = `plan_${Date.now()}`;
+      const timestamp = new Date().toISOString();
+      
+      // إنشاء تحليل افتراضي
+      const analysis = {
+        swot: `نقاط القوة: ${request.competitiveAdvantages.join('، ')}. نقاط الضعف: ${request.riskFactors.join('، ')}. الفرص: السوق السعودي ينمو بقوة. التهديدات: المنافسة الشديدة.`,
+        market: `حجم السوق: ${request.marketSize.toLocaleString()} ريال. معدل النمو: ${(request.marketGrowthRate * 100).toFixed(1)}%. الحصة المستهدفة: ${(request.targetMarketShare * 100).toFixed(1)}%.`,
+        costs: `الاستثمار الأولي: ${request.initialInvestment.toLocaleString()} ريال. التكاليف الثابتة: ${request.fixedCosts.toLocaleString()} ريال. التكاليف المتغيرة: ${request.variableCosts.toLocaleString()} ريال.`,
+        profitability: `الإيرادات المتوقعة: ${request.revenueProjections.map(r => r.toLocaleString()).join('، ')} ريال. نقطة التعادل متوقعة خلال 12-18 شهر.`,
+        marketing: {
+          campaigns: 'استراتيجية تسويقية متعددة القنوات: التسويق الرقمي، الشراكة مع المؤثرين، الحملات الإعلانية.',
+          audience: `الجمهور المستهدف: ${request.targetMarket}. الخصائص الديموغرافية: العائلات الشابة، الدخل المتوسط والعالي.`,
+          platforms: 'المنصات الرئيسية: سناب شات، انستقرام، تيك توك، جوجل، فيسبوك.'
         },
-        body: JSON.stringify({
-          text: `أريد دراسة جدوى لمشروع ${request.projectName} في قطاع ${request.industry}`,
-          context: {
-            sector: request.industry,
-            city: request.location,
-            capex: request.initialInvestment,
-            price_avg: request.revenueProjections[0] / 12 / (request.initialInvestment * 0.1), // تقدير
-            customers_month: Math.round(request.revenueProjections[0] / 12 / 50), // تقدير
-            cogs_ratio: request.variableCosts / request.revenueProjections[0],
-            opex_monthly: request.fixedCosts / 12,
-            months: 60,
-            projectName: request.projectName
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      // تسجيل النشاط
-      this.logActivity('business_plan_generated', { projectName: request.projectName });
+        financial: {
+          cashFlow: `التدفق النقدي المتوقع: السنة الأولى ${request.revenueProjections[0].toLocaleString()} ريال، السنة الثانية ${request.revenueProjections[1].toLocaleString()} ريال.`,
+          breakeven: `نقطة التعادل: ${Math.round(request.initialInvestment / (request.revenueProjections[0] / 12))} شهر.`
+        }
+      };
+      
+      // حفظ الدراسة في localStorage
+      const businessPlan = {
+        id: planId,
+        projectName: request.projectName,
+        industry: request.industry,
+        description: request.description,
+        location: request.location,
+        analysis,
+        timestamp,
+        status: 'completed'
+      };
+      
+      this.saveBusinessPlan(businessPlan);
       
       return {
         success: true,
-        plan_id: `plan_${Date.now()}`,
-        files: result.files,
-        generated_at: result.timestamp,
-        summary: result.summary,
-        analysis: result.analysis,
-        financials: result.financials,
-        bankability: result.bankability
+        plan_id: planId,
+        files: {
+          excel: `${planId}_financial_model.xlsx`,
+          pdf: `${planId}_business_plan.pdf`
+        },
+        generated_at: timestamp,
+        summary: `تم إنتاج دراسة جدوى شاملة لمشروع ${request.projectName}`,
+        analysis,
+        financials: {
+          initialInvestment: request.initialInvestment,
+          revenueProjections: request.revenueProjections,
+          breakEvenMonths: Math.round(request.initialInvestment / (request.revenueProjections[0] / 12))
+        },
+        bankability: {
+          score: 85,
+          recommendation: 'مشروع قابل للتمويل مع بعض التحسينات المطلوبة'
+        }
       };
     } catch (error) {
       console.error('Business plan generation error:', error);
@@ -237,6 +174,111 @@ class APIService {
     }
   }
 
+  // Download File - محاكاة مع localStorage
+  async downloadFile(planId: string, fileType: string) {
+    try {
+      // محاكاة تحميل الملف
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // إنشاء ملف وهمي
+      const content = fileType === 'excel' 
+        ? 'Excel file content here' 
+        : 'PDF file content here';
+      
+      const blob = new Blob([content], { 
+        type: fileType === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${planId}_${fileType}.${fileType === 'excel' ? 'xlsx' : 'pdf'}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('تم تحميل الملف بنجاح');
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('خطأ في تحميل الملف');
+      throw error;
+    }
+  }
+
+  // Project Management - مع localStorage
+  async saveProject(inputData: any) {
+    try {
+      const projectId = `project_${Date.now()}`;
+      const savedProject = { 
+        ...inputData, 
+        id: projectId, 
+        created_at: new Date().toISOString(),
+        user_id: this.getCurrentUserId()
+      };
+      
+      const existingProjects = JSON.parse(localStorage.getItem('user_projects') || '[]');
+      existingProjects.push(savedProject);
+      localStorage.setItem('user_projects', JSON.stringify(existingProjects));
+      
+      toast.success('تم حفظ المشروع بنجاح');
+      return savedProject;
+    } catch (error) {
+      console.error('Save project error:', error);
+      toast.error('خطأ في حفظ المشروع');
+      throw error;
+    }
+  }
+
+  async getUserProjects(userId: string) {
+    try {
+      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
+      return projects.filter((p: any) => p.user_id === userId);
+    } catch (error) {
+      console.error('Get projects error:', error);
+      return [];
+    }
+  }
+
+  async updateProject(projectId: string, updates: any) {
+    try {
+      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
+      const projectIndex = projects.findIndex((p: any) => p.id === projectId);
+      
+      if (projectIndex === -1) throw new Error('Project not found');
+      
+      projects[projectIndex] = { 
+        ...projects[projectIndex], 
+        ...updates, 
+        updated_at: new Date().toISOString() 
+      };
+      localStorage.setItem('user_projects', JSON.stringify(projects));
+      
+      toast.success('تم تحديث المشروع بنجاح');
+      return projects[projectIndex];
+    } catch (error) {
+      console.error('Update project error:', error);
+      toast.error('خطأ في تحديث المشروع');
+      throw error;
+    }
+  }
+
+  async deleteProject(projectId: string) {
+    try {
+      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
+      const filteredProjects = projects.filter((p: any) => p.id !== projectId);
+      localStorage.setItem('user_projects', JSON.stringify(filteredProjects));
+      
+      toast.success('تم حذف المشروع بنجاح');
+    } catch (error) {
+      console.error('Delete project error:', error);
+      toast.error('خطأ في حذف المشروع');
+      throw error;
+    }
+  }
+
+  // Helper Methods
   private validateBusinessPlanRequest(request: BusinessPlanRequest) {
     const errors: string[] = [];
 
@@ -265,44 +307,70 @@ class APIService {
     }
   }
 
-  async downloadFile(planId: string, fileType: string) {
-    try {
-      const response = await fetch(`${this.baseURL}/download/${planId}/${fileType}`, {
-        headers: {
-          'Authorization': `Bearer ${await this.getAuthToken()}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${planId}_${fileType}.${fileType === 'excel' ? 'xlsx' : 'pdf'}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast.success('تم تحميل الملف بنجاح');
-      
-      // تسجيل النشاط
-      this.logActivity('file_downloaded', { planId, fileType });
-      
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('خطأ في تحميل الملف');
-      throw error;
+  private generateSmartResponse(message: string): string {
+    const lowerMessage = message.toLowerCase();
+    
+    if (lowerMessage.includes('مشروع') || lowerMessage.includes('استثمار')) {
+      return 'أهلاً بك! يمكنني مساعدتك في تحليل مشروعك وإنتاج دراسة جدوى شاملة. ما نوع المشروع الذي تريد تحليله؟';
     }
+    
+    if (lowerMessage.includes('دراسة جدوى') || lowerMessage.includes('تحليل')) {
+      return 'ممتاز! لإنشاء دراسة جدوى احترافية، أحتاج لمعرفة تفاصيل مشروعك: نوع النشاط، الموقع، الاستثمار المبدئي، والجمهور المستهدف.';
+    }
+    
+    if (lowerMessage.includes('تمويل') || lowerMessage.includes('قرض')) {
+      return 'يمكنني مساعدتك في تحليل متطلبات التمويل وتحديد أفضل مصادر التمويل المناسبة لمشروعك. ما هو حجم التمويل المطلوب؟';
+    }
+    
+    if (lowerMessage.includes('سوق') || lowerMessage.includes('منافسة')) {
+      return 'تحليل السوق جزء مهم من أي مشروع. يمكنني مساعدتك في فهم حجم السوق، المنافسين، والفرص المتاحة.';
+    }
+    
+    return 'شكراً لك على رسالتك! كيف يمكنني مساعدتك في تطوير مشروعك؟';
   }
 
+  private saveConversation(conversation: any) {
+    const conversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+    conversations.push(conversation);
+    
+    // الاحتفاظ بآخر 100 محادثة فقط
+    if (conversations.length > 100) {
+      conversations.splice(0, conversations.length - 100);
+    }
+    
+    localStorage.setItem('conversations', JSON.stringify(conversations));
+  }
+
+  private saveBusinessPlan(businessPlan: any) {
+    const businessPlans = JSON.parse(localStorage.getItem('business_plans') || '[]');
+    businessPlans.push(businessPlan);
+    
+    // الاحتفاظ بآخر 50 دراسة جدوى فقط
+    if (businessPlans.length > 50) {
+      businessPlans.splice(0, businessPlans.length - 50);
+    }
+    
+    localStorage.setItem('business_plans', JSON.stringify(businessPlans));
+  }
+
+  private getCurrentUserId(): string {
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    return user?.id || 'anonymous';
+  }
+
+  // Stats and Health Check
   async getStats() {
     try {
-      const response = await fetch(`${this.baseURL}/stats`);
-      return await response.json();
+      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
+      const conversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+      const businessPlans = JSON.parse(localStorage.getItem('business_plans') || '[]');
+      
+      return {
+        totalProjects: projects.length,
+        totalConversations: conversations.length,
+        totalBusinessPlans: businessPlans.length,
+        lastActivity: new Date().toISOString()
+      };
     } catch (error) {
       console.error('Stats error:', error);
       return null;
@@ -310,221 +378,24 @@ class APIService {
   }
 
   async getModelsStatus() {
-    try {
-      const response = await fetch(`${this.baseURL}/models/status`);
-      return await response.json();
-    } catch (error) {
-      console.error('Models status error:', error);
-      return null;
-    }
+    return {
+      local_ai: 'active',
+      local_voice: 'active',
+      status: 'healthy'
+    };
   }
 
-  private async getAuthToken(): Promise<string> {
-    // Using localStorage for demo - no real auth token needed
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    return isAuthenticated === 'true' ? 'demo_token' : '';
-  }
-
-  // Project management مع تحسينات أمنية
-  async saveProject(inputData: any) {
-    try {
-      // تنظيف البيانات
-      const sanitizedData = {
-        ...inputData,
-        title: SecurityUtils.sanitizeInput(inputData.title),
-        description: SecurityUtils.sanitizeInput(inputData.description)
-      };
-
-      // Using localStorage for demo - simulate project save
-      const projectId = `project_${Date.now()}`;
-      const savedProject = { ...sanitizedData, id: projectId, created_at: new Date().toISOString() };
-      
-      const existingProjects = JSON.parse(localStorage.getItem('user_projects') || '[]');
-      existingProjects.push(savedProject);
-      localStorage.setItem('user_projects', JSON.stringify(existingProjects));
-      
-      const data = savedProject;
-      
-      toast.success('تم حفظ المشروع بنجاح');
-      
-      // تسجيل النشاط
-      this.logActivity('project_saved', { projectId: data.id });
-      
-      return data;
-    } catch (error) {
-      console.error('Save project error:', error);
-      toast.error('خطأ في حفظ المشروع');
-      throw error;
-    }
-  }
-
-  async getUserProjects(userId: string) {
-    try {
-      // Using localStorage for demo - get user projects
-      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
-      return projects.filter((p: any) => p.user_id === userId);
-    } catch (error) {
-      console.error('Get projects error:', error);
-      return [];
-    }
-  }
-
-  async updateProject(projectId: string, updates: any) {
-    try {
-      // تنظيف البيانات
-      const sanitizedUpdates = {
-        ...updates,
-        title: updates.title ? SecurityUtils.sanitizeInput(updates.title) : undefined,
-        description: updates.description ? SecurityUtils.sanitizeInput(updates.description) : undefined,
-        updated_at: new Date().toISOString()
-      };
-
-      // Using localStorage for demo - update project
-      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
-      const projectIndex = projects.findIndex((p: any) => p.id === projectId);
-      
-      if (projectIndex === -1) throw new Error('Project not found');
-      
-      projects[projectIndex] = { ...projects[projectIndex], ...sanitizedUpdates };
-      localStorage.setItem('user_projects', JSON.stringify(projects));
-      
-      const data = projects[projectIndex];
-      
-      toast.success('تم تحديث المشروع بنجاح');
-      
-      // تسجيل النشاط
-      this.logActivity('project_updated', { projectId });
-      
-      return data;
-    } catch (error) {
-      console.error('Update project error:', error);
-      toast.error('خطأ في تحديث المشروع');
-      throw error;
-    }
-  }
-
-  async deleteProject(projectId: string) {
-    try {
-      // Using localStorage for demo - delete project
-      const projects = JSON.parse(localStorage.getItem('user_projects') || '[]');
-      const filteredProjects = projects.filter((p: any) => p.id !== projectId);
-      localStorage.setItem('user_projects', JSON.stringify(filteredProjects));
-      
-      toast.success('تم حذف المشروع بنجاح');
-      
-      // تسجيل النشاط
-      this.logActivity('project_deleted', { projectId });
-      
-    } catch (error) {
-      console.error('Delete project error:', error);
-      toast.error('خطأ في حذف المشروع');
-      throw error;
-    }
-  }
-
-  // تسجيل الأنشطة للمراقبة
-  private async logActivity(action: string, details: any) {
-    try {
-      // Using localStorage for demo - log activity
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-      
-      if (currentUser) {
-        const logs = JSON.parse(localStorage.getItem('activity_logs') || '[]');
-        logs.push({
-          user_id: currentUser.id,
-          action,
-          details,
-          timestamp: new Date().toISOString()
-        });
-        localStorage.setItem('activity_logs', JSON.stringify(logs.slice(-100))); // Keep last 100 logs
-      }
-    } catch (error) {
-      // فشل تسجيل النشاط لا يجب أن يؤثر على العملية الأساسية
-      console.warn('Failed to log activity:', error);
-    }
-  }
-
-  // إدارة الجلسات الآمنة
-  async refreshSession() {
-    try {
-      // Using localStorage for demo - no session refresh needed
-      const isAuthenticated = localStorage.getItem('isAuthenticated');
-      return isAuthenticated === 'true' ? { access_token: 'demo_token' } : null;
-    } catch (error) {
-      console.error('Session refresh error:', error);
-      return null;
-    }
-  }
-
-  // تنظيف البيانات الحساسة
-  clearSensitiveData() {
-    // مسح البيانات الحساسة من الذاكرة
-    SecurityUtils.clearSensitiveData(this);
-    
-    // مسح التخزين المحلي للبيانات الحساسة
-    const sensitiveKeys = ['auth_token', 'session_data', 'user_cache'];
-    sensitiveKeys.forEach(key => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    });
-  }
-
-  // مراقبة صحة الاتصال
   async healthCheck() {
-    try {
-      const response = await fetch(`${this.baseURL}/health`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000) // 3 second timeout
-      });
-      return await response.json();
-    } catch (error) {
-      console.error('Health check failed:', error);
-      return { status: 'unhealthy' };
-    }
-  }
-
-  // إدارة الأخطاء المتقدمة
-  private handleError(error: any, context: string) {
-    // تسجيل الخطأ مع السياق
-    console.error(`API Error in ${context}:`, error);
-    
-    // إرسال تقرير خطأ (في الإنتاج)
-    if (import.meta.env.PROD) {
-      this.reportError(error, context);
-    }
-    
-    // عرض رسالة خطأ مناسبة للمستخدم
-    if (error.message.includes('network')) {
-      toast.error('مشكلة في الاتصال بالإنترنت');
-    } else if (error.message.includes('unauthorized')) {
-      toast.error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى');
-    } else {
-      toast.error('حدث خطأ غير متوقع');
-    }
-  }
-
-  private async reportError(error: any, context: string) {
-    try {
-      // إرسال تقرير الخطأ للخادم للمراقبة
-      await this.makeRequest('/errors/report', {
-        method: 'POST',
-        body: JSON.stringify({
-          error: error.message,
-          context,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href
-        })
-      });
-    } catch (reportError) {
-      console.warn('Failed to report error:', reportError);
-    }
+    return {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        localStorage: 'active',
+        voiceProcessing: 'active',
+        textProcessing: 'active'
+      }
+    };
   }
 }
 
 export const apiService = new APIService();
-
-// تنظيف البيانات عند إغلاق النافذة
-window.addEventListener('beforeunload', () => {
-  apiService.clearSensitiveData();
-});
