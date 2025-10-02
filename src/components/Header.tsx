@@ -105,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({
               <Menu className="h-6 w-6" />
             </button>
             
-            <div className="cursor-pointer flex items-center gap-3" onClick={() => onViewChange('home')}>
+            <div className="cursor-pointer flex items-center gap-3 ml-4" onClick={() => onViewChange('home')}>
               {/* Replace SVG logo with PNG logo */}
               <img 
                 src="/smartstartai_final_logo.png" 

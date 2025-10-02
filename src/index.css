@@ -71,6 +71,20 @@
   .dark .bg-gray-100 {
     @apply bg-gray-800;
   }
+
+  /* Dark mode fixes for gradient backgrounds used as page wrappers */
+  /* Many pages use bg-gradient-to-br from-gray-50 to-light-green; force them to dark */
+  .dark .from-gray-50 {
+    @apply from-gray-900;
+  }
+
+  .dark .to-light-green {
+    @apply to-gray-900;
+  }
+
+  .dark .bg-gradient-to-br.from-gray-50.to-light-green {
+    @apply from-gray-900 to-gray-900;
+  }
 }
 
 /* Accessibility improvements */

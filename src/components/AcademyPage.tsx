@@ -7,7 +7,7 @@ interface AcademyPageProps {
 
 const AcademyPage: React.FC<AcademyPageProps> = ({ onBack }) => {
   return (
-    <section className="py-16 px-4">
+    <section className="min-h-screen bg-gradient-to-br from-gray-50 to-light-green py-16 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

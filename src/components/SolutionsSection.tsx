@@ -361,7 +361,7 @@ const SolutionsSection: React.FC<SolutionsSectionProps> = ({ isDarkMode = false 
                   <h3 className="text-xl font-almarai font-bold">نتائج الخدمة</h3>
                   <button
                     onClick={() => setShowResultModal(false)}
-                    className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-gray-700 hover:text-gray-900 hover:bg-black/5'}`}
+                    className={`p-2 rounded-lg transition-colors ${isDarkMode ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'}`}
                   >
                     <X className="h-5 w-5" />
                   </button>
