@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { AuthUser } from '../lib/auth';
-import { authService } from '../lib/auth';
+import { authService, getUserRoleFromFirestore } from '../lib/auth';
+import { db } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 interface AuthState {
@@ -9,6 +11,7 @@ interface AuthState {
   user: AuthUser | null;
   loading: boolean;
   error: string | null;
+  unsubscribeRole?: () => void;
   
   // Actions
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -31,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
         user: null,
         loading: false,
         error: null,
+        unsubscribeRole: undefined,
 
         // Sign in
         signIn: async (email: string, password: string) => {
@@ -38,8 +42,32 @@ export const useAuthStore = create<AuthState>()(
           try {
             const result = await authService.signIn(email, password);
             if (result.success) {
-              set({ user: result.user, loading: false });
-              toast.success('تم تسجيل الدخول بنجاح!');
+              // تأكد من قراءة الدور الأحدث من Firestore بعد تسجيل الدخول
+              try {
+                const freshRole = await getUserRoleFromFirestore(result.user!.id);
+                const user = { ...result.user!, role: freshRole } as any;
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                set({ user, loading: false });
+                // ابدأ مستمع الدور الفوري
+                try {
+                  get().unsubscribeRole?.();
+                  const unsub = onSnapshot(doc(db, 'users', user.id), (snap) => {
+                    if (!snap.exists()) return;
+                    const nextRole = (snap.data() as any).role || 'user';
+                    const current = get().user;
+                    if (!current) return;
+                    if (current.role !== nextRole) {
+                      const updated = { ...current, role: nextRole } as any;
+                      localStorage.setItem('currentUser', JSON.stringify(updated));
+                      set({ user: updated });
+                    }
+                  });
+                  set({ unsubscribeRole: unsub });
+                } catch {}
+              } catch {
+                set({ user: result.user!, loading: false });
+              }
+              // تمت إزالة رسالة النجاح بناءً على طلبك
               return true;
             } else {
               set({ error: result.error, loading: false });
@@ -59,8 +87,31 @@ export const useAuthStore = create<AuthState>()(
           try {
             const result = await authService.signUp(email, password, userData);
             if (result.success) {
-              set({ user: result.user, loading: false });
-              toast.success('تم إنشاء حسابك بنجاح!');
+              // قراءة الدور بعد التسجيل أيضاً (في حال تم منحه Admin يدوياً)
+              try {
+                const freshRole = await getUserRoleFromFirestore(result.user!.id);
+                const user = { ...result.user!, role: freshRole } as any;
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                set({ user, loading: false });
+                // ابدأ مستمع الدور الفوري
+                try {
+                  get().unsubscribeRole?.();
+                  const unsub = onSnapshot(doc(db, 'users', user.id), (snap) => {
+                    if (!snap.exists()) return;
+                    const nextRole = (snap.data() as any).role || 'user';
+                    const current = get().user;
+                    if (!current) return;
+                    if (current.role !== nextRole) {
+                      const updated = { ...current, role: nextRole } as any;
+                      localStorage.setItem('currentUser', JSON.stringify(updated));
+                      set({ user: updated });
+                    }
+                  });
+                  set({ unsubscribeRole: unsub });
+                } catch {}
+              } catch {
+                set({ user: result.user!, loading: false });
+              }
               return true;
             } else {
               set({ error: result.error, loading: false });
@@ -99,31 +150,16 @@ export const useAuthStore = create<AuthState>()(
 
         // Apple sign in
         signInWithApple: async () => {
-          set({ loading: true, error: null });
-          try {
-            const result = await authService.signInWithApple();
-            if (result.success) {
-              set({ loading: false });
-              toast.success('جاري تسجيل الدخول عبر Apple...');
-              return true;
-            } else {
-              set({ error: result.error, loading: false });
-              toast.error(result.error || 'خطأ في تسجيل الدخول عبر Apple');
-              return false;
-            }
-          } catch (error: any) {
-            set({ error: error.message, loading: false });
-            toast.error(error.message || 'خطأ في تسجيل الدخول عبر Apple');
-            return false;
-          }
+          toast.error('تسجيل الدخول عبر Apple غير متاح حالياً');
+          return false;
         },
 
         // Sign out
         signOut: async () => {
           try {
             await authService.signOut();
-            set({ user: null, error: null });
-            toast.success('تم تسجيل الخروج بنجاح');
+            try { get().unsubscribeRole?.(); } catch {}
+            set({ user: null, error: null, unsubscribeRole: undefined });
           } catch (error: any) {
             set({ error: error.message });
             toast.error('خطأ في تسجيل الخروج');

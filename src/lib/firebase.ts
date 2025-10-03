@@ -2,6 +2,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +19,7 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export let analytics: ReturnType<typeof getAnalytics> | undefined;
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 // Initialize Analytics only in browser when supported and measurementId exists
 if (typeof window !== 'undefined' && firebaseConfig.measurementId && import.meta.env.MODE === 'production') {

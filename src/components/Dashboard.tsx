@@ -45,7 +45,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { useAuthStore } from '../stores';
+import { useAuthStore, useUIStore } from '../stores';
 import { apiService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -64,6 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects: initialProjects, onProj
   const [sortBy, setSortBy] = useState<'date' | 'name' | 'status'>('date');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const { user } = useAuthStore();
+  const { setCurrentView } = useUIStore();
 
   // تحديث المشاريع عند تغيير المستخدم
   useEffect(() => {
@@ -250,11 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects: initialProjects, onProj
             
             <div className="flex items-center gap-4">
               <motion.button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.hash = 'flow';
-                  }
-                }}
+                onClick={() => setCurrentView('flow')}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="bg-gradient-to-r from-saudi-green to-saudi-gold text-white px-6 py-3 rounded-xl font-almarai font-bold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
@@ -679,11 +676,7 @@ const Dashboard: React.FC<DashboardProps> = ({ projects: initialProjects, onProj
                       {searchTerm ? 'جرب كلمات بحث أخرى' : 'ابدأ بإنشاء مشروعك الأول للحصول على تحليل شامل'}
                     </p>
                     <motion.button 
-                      onClick={() => {
-                        if (typeof window !== 'undefined') {
-                          window.location.hash = 'flow';
-                        }
-                      }}
+                      onClick={() => setCurrentView('flow')}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="bg-gradient-to-r from-saudi-green to-saudi-gold text-white px-6 py-3 rounded-xl font-almarai font-bold hover:shadow-lg transition-all duration-300"

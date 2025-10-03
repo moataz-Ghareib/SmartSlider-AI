@@ -1,6 +1,6 @@
 // Authentication service using Firebase
-import { auth } from './firebase';
-import { db } from './firebase';
+import { auth, storage, db } from './firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
@@ -18,18 +18,30 @@ export interface AuthUser {
   name: string;
   phone?: string;
   city?: string;
+  avatarUrl?: string;
   subscription_type: 'free' | 'growth' | 'enterprise';
   role?: 'admin' | 'user';
 }
 
 export interface User extends AuthUser {}
 
-async function loadUserRoleFromFirestore(userId: string): Promise<'admin' | 'user'> {
+export async function getUserRoleFromFirestore(userId: string): Promise<'admin' | 'user'> {
   try {
     const snap = await getDoc(doc(db, 'users', userId));
     if (snap.exists()) {
       const data = snap.data() as any;
-      return (data.role as 'admin' | 'user') || 'user';
+      const role = (data.role as 'admin' | 'user') || 'user';
+      // keep a lightweight cache to avoid stale UI
+      try {
+        const cachedRaw = localStorage.getItem('currentUser');
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached && cached.id === userId && cached.role !== role) {
+            localStorage.setItem('currentUser', JSON.stringify({ ...cached, role }));
+          }
+        }
+      } catch {}
+      return role;
     }
   } catch {}
   return 'user';
@@ -80,16 +92,30 @@ export const signUp = async (
       subscription_type: 'free',
       role: 'user'
     };
-    // Persist profile in Firestore
-    await setDoc(doc(db, 'users', user.id), {
-      email: user.email,
-      name: user.name,
-      phone: user.phone || '',
-      city: user.city || '',
-      subscription_type: user.subscription_type,
-      role: user.role,
-      createdAt: new Date().toISOString(),
-    }, { merge: true });
+    // Persist profile in Firestore without overwriting existing role for pre-provisioned admins
+    const userRef = doc(db, 'users', user.id);
+    const existing = await getDoc(userRef);
+    if (!existing.exists()) {
+      await setDoc(userRef, {
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        city: user.city || '',
+        subscription_type: user.subscription_type,
+        role: user.role,
+        createdAt: new Date().toISOString(),
+      }, { merge: true });
+    } else {
+      // Do not touch role if doc exists
+      await setDoc(userRef, {
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        city: user.city || '',
+        subscription_type: user.subscription_type,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    }
     localStorage.setItem('currentUser', JSON.stringify(user));
     localStorage.setItem('isAuthenticated', 'true');
     return { success: true, user };
@@ -102,10 +128,21 @@ export const signUp = async (
   }
 };
 
+export async function uploadUserAvatar(userId: string, file: File): Promise<string> {
+  const fileRef = ref(storage, `avatars/${userId}`);
+  const snap = await uploadBytes(fileRef, file, { contentType: file.type });
+  const url = await getDownloadURL(snap.ref);
+  // persist url in Firestore user doc
+  try {
+    await setDoc(doc(db, 'users', userId), { avatarUrl: url, updatedAt: new Date().toISOString() }, { merge: true });
+  } catch {}
+  return url;
+}
+
 export const signIn = async (email: string, _password: string): Promise<{ success: boolean; user?: AuthUser; error?: string }> => {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, _password);
-    const role = await loadUserRoleFromFirestore(cred.user.uid);
+    const role = await getUserRoleFromFirestore(cred.user.uid);
 
     const user: AuthUser = {
       id: cred.user.uid,
@@ -150,7 +187,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         unsubscribe();
         if (!fbUser) return resolve(null);
         (async () => {
-          const role = await loadUserRoleFromFirestore(fbUser.uid);
+          const role = await getUserRoleFromFirestore(fbUser.uid);
           const user: User = {
             id: fbUser.uid,
             email: fbUser.email || '',
@@ -225,7 +262,7 @@ export class AuthService {
       const provider = new GoogleAuthProvider();
       const cred = await signInWithPopup(auth, provider);
       // Upsert profile and read role
-      const existingRole = await loadUserRoleFromFirestore(cred.user.uid);
+      const existingRole = await getUserRoleFromFirestore(cred.user.uid);
       await setDoc(doc(db, 'users', cred.user.uid), {
         email: cred.user.email || 'user@gmail.com',
         name: cred.user.displayName || 'مستخدم Google',
@@ -233,7 +270,7 @@ export class AuthService {
         role: existingRole || 'user',
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      const role = await loadUserRoleFromFirestore(cred.user.uid);
+      const role = await getUserRoleFromFirestore(cred.user.uid);
       const user: AuthUser = {
         id: cred.user.uid,
         email: cred.user.email || 'user@gmail.com',

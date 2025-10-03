@@ -30,6 +30,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useAuthStore } from '../stores';
+import { uploadUserAvatar } from '../lib/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
@@ -457,19 +458,33 @@ const UserProfile: React.FC = () => {
           <div className="flex flex-col lg:flex-row items-center gap-8">
             {/* صورة المستخدم */}
             <div className="relative">
-              <div 
-                className="w-32 h-32 bg-gradient-to-r from-saudi-green to-saudi-gold rounded-full flex items-center justify-center text-6xl cursor-pointer"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.hash = 'profile';
-                  }
-                }}
-              >
-                👨‍💼
+              <div className="w-32 h-32 rounded-full overflow-hidden bg-gradient-to-r from-saudi-green to-saudi-gold flex items-center justify-center">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-6xl">👨‍💼</span>
+                )}
               </div>
-              <button className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow">
+              <label className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-shadow cursor-pointer">
                 <Camera className="h-5 w-5 text-gray-600" />
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !user) return;
+                    try {
+                      const url = await uploadUserAvatar(user.id, file);
+                      // refresh UI from local user store
+                      await updateProfile({} as any);
+                      toast.success('تم تحديث الصورة');
+                    } catch (err) {
+                      toast.error('فشل رفع الصورة');
+                    }
+                  }}
+                />
+              </label>
             </div>
 
             {/* معلومات المستخدم */}

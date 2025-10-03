@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Phone, Eye, EyeOff, CheckCircle, AlertTriangle, Shield, Zap } from 'lucide-react';
-import { useForm, FieldErrors } from 'react-hook-form';
+import { X, Mail, Lock, User, Phone, Eye, EyeOff, CheckCircle, Shield, Zap } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { loginSchema, registerSchema } from '../utils/validation';
 import { useAuthStore } from '../stores';
@@ -24,7 +24,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signUp, signIn, signInWithGoogle, signInWithApple, loading } = useAuthStore();
+  const { signUp, signIn, signInWithGoogle, loading } = useAuthStore();
 
   // Login form
   const loginForm = useForm<LoginFormData>({
@@ -34,13 +34,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
 
   // Register form
   const registerForm = useForm<RegisterFormData>({
-    resolver: yupResolver(registerSchema),
+    resolver: yupResolver(registerSchema) as any,
     mode: 'onChange'
   });
 
   // Use the appropriate form based on mode
   const currentForm = mode === 'login' ? loginForm : registerForm;
-  const { register, handleSubmit, formState: { errors, isValid }, reset, watch, trigger } = currentForm;
+  const { handleSubmit, formState: { errors, isValid }, reset } = currentForm as any;
+  const reg: any = (currentForm as any).register;
 
   const cities = [
     'الرياض', 'جدة', 'مكة المكرمة', 'المدينة المنورة', 'الدمام', 
@@ -148,7 +149,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                         <User className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                         <input
                           id="fullName"
-                          {...register('name')}
+                          {...reg('name')}
                           className={`w-full pr-10 pl-4 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                             (registerForm.formState.errors.name) ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
                           }`}
@@ -183,7 +184,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                       <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <input
                         id="email"
-                        {...register('email')}
+                        {...reg('email')}
                         type="email"
                         className={`w-full pr-10 pl-4 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                           errors.email ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
@@ -220,7 +221,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                           <Phone className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <input
                             id="phone"
-                            {...register('phone')}
+                            {...reg('phone')}
                             type="tel"
                             className={`w-full pr-10 pl-4 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                               registerForm.formState.errors.phone ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
@@ -258,7 +259,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                         </label>
                         <select
                           id="city"
-                          {...register('city')}
+                          {...reg('city')}
                           className={`w-full px-4 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                             registerForm.formState.errors.city ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
                           }`}
@@ -305,7 +306,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                       </button>
                       <input
                         id="password"
-                        {...register('password')}
+                        {...reg('password')}
                         type={showPassword ? 'text' : 'password'}
                         className={`w-full pr-10 pl-10 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                           errors.password ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
@@ -349,7 +350,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                             {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
                           <input
-                            {...register('confirmPassword')}
+                            {...reg('confirmPassword')}
                             type={showConfirmPassword ? 'text' : 'password'}
                             className={`w-full pr-10 pl-10 py-3 border-2 rounded-xl font-almarai text-right focus:outline-none transition-colors ${
                               registerForm.formState.errors.confirmPassword ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-saudi-green'
@@ -375,7 +376,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                         className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl"
                       >
                         <input
-                          {...register('terms')}
+                          {...reg('terms')}
                           type="checkbox"
                           id="terms-checkbox"
                           className="w-5 h-5 text-saudi-green border-gray-300 rounded focus:ring-saudi-green mt-1"
@@ -423,12 +424,29 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                     </>
                   )}
 
+                  <motion.button
+                    type="submit"
+                    disabled={loading || isSubmitting || !isValid}
+                    whileHover={isValid ? { scale: 1.02 } : {}}
+                    whileTap={isValid ? { scale: 0.98 } : {}}
+                    className="w-full bg-gradient-to-r from-saudi-green to-saudi-gold text-white py-4 rounded-xl font-almarai font-bold text-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading || isSubmitting ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        {mode === 'login' ? 'جاري تسجيل الدخول...' : 'جاري إنشاء الحساب...'}
+                      </div>
+                    ) : (
+                      mode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب جديد'
+                    )}
+                  </motion.button>
+
                   {/* أزرار التسجيل الاجتماعي */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="space-y-4"
+                    transition={{ delay: 0.2 }}
+                    className="space-y-4 mt-6"
                   >
                     <div className="relative">
                       <div className="absolute inset-0 flex items-center">
@@ -457,39 +475,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onModeChan
                         {mode === 'login' ? 'دخول عبر Google' : 'تسجيل عبر Google'}
                       </motion.button>
 
-                      <motion.button
-                        type="button"
-                        onClick={signInWithApple}
-                        disabled={loading}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 border-2 border-gray-900 rounded-xl font-almarai font-bold text-white bg-gray-900 hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 shadow-sm hover:shadow-md"
-                      >
-                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09z"/>
-                          <path d="M15.53 3.83c.893-1.09 1.479-2.58 1.309-4.08-1.297.049-2.87.8-3.8 1.78-.8.9-1.5 2.34-1.34 3.73 1.42.11 2.87-.72 3.83-1.43z"/>
-                        </svg>
-                        {mode === 'login' ? 'دخول عبر Apple' : 'تسجيل عبر Apple'}
-                      </motion.button>
+                      {/* Apple sign-in removed */}
                     </div>
                   </motion.div>
-
-                  <motion.button
-                    type="submit"
-                    disabled={loading || isSubmitting || !isValid}
-                    whileHover={isValid ? { scale: 1.02 } : {}}
-                    whileTap={isValid ? { scale: 0.98 } : {}}
-                    className="w-full bg-gradient-to-r from-saudi-green to-saudi-gold text-white py-4 rounded-xl font-almarai font-bold text-lg hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-                  >
-                    {loading || isSubmitting ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        {mode === 'login' ? 'جاري تسجيل الدخول...' : 'جاري إنشاء الحساب...'}
-                      </div>
-                    ) : (
-                      mode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب جديد'
-                    )}
-                  </motion.button>
 
                   <div className="text-center">
                     <p className="text-gray-600 font-almarai">

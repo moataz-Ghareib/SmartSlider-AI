@@ -58,6 +58,10 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores';
+import { db } from '../lib/firebase';
+import { 
+  collection, getCountFromServer, query, where, getDocs, orderBy, limit, Timestamp, onSnapshot
+} from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 const AdminDashboard: React.FC = () => {
@@ -68,12 +72,12 @@ const AdminDashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [editMode, setEditMode] = useState(false);
   const [editableData, setEditableData] = useState({
-    totalUsers: 12847,
-    activeUsers: 8934,
-    totalProjects: 45623,
-    completedAnalyses: 38291,
-    revenue: 2847392,
-    growth: 24.5
+    totalUsers: 0,
+    activeUsers: 0,
+    totalProjects: 0,
+    completedAnalyses: 0,
+    revenue: 0,
+    growth: 0
   });
   const { user } = useAuthStore();
 
@@ -84,62 +88,115 @@ const AdminDashboard: React.FC = () => {
     apiResponseTime: 234
   };
 
-  const recentUsers = [
-    {
-      id: '1',
-      name: 'أحمد محمد العتيبي',
-      email: 'ahmed.alotaibi@email.com',
-      phone: '0501234567',
-      city: 'الرياض',
-      subscription: 'growth',
-      status: 'active',
-      joinDate: '2024-03-15',
-      lastLogin: '2024-03-20',
-      projectsCount: 5,
-      totalSpent: 1200
-    },
-    {
-      id: '2',
-      name: 'فاطمة سالم الزهراني',
-      email: 'fatima.alzahrani@email.com',
-      phone: '0509876543',
-      city: 'جدة',
-      subscription: 'enterprise',
-      status: 'active',
-      joinDate: '2024-02-28',
-      lastLogin: '2024-03-19',
-      projectsCount: 12,
-      totalSpent: 4500
-    },
-    {
-      id: '3',
-      name: 'محمد عبدالله القحطاني',
-      email: 'mohammed.alqahtani@email.com',
-      phone: '0551234567',
-      city: 'الدمام',
-      subscription: 'free',
-      status: 'inactive',
-      joinDate: '2024-03-10',
-      lastLogin: '2024-03-12',
-      projectsCount: 2,
-      totalSpent: 0
-    }
-  ];
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
 
-  const systemMetrics = [
-    { name: 'يناير', users: 1200, projects: 3400, revenue: 145000 },
-    { name: 'فبراير', users: 1890, projects: 4200, revenue: 189000 },
-    { name: 'مارس', users: 2340, projects: 5100, revenue: 234000 },
-    { name: 'أبريل', users: 2890, projects: 6200, revenue: 298000 },
-    { name: 'مايو', users: 3450, projects: 7300, revenue: 356000 },
-    { name: 'يونيو', users: 4120, projects: 8500, revenue: 423000 }
-  ];
+  const [systemMetrics, setSystemMetrics] = useState<any[]>([]);
 
-  const subscriptionData = [
-    { name: 'مجاني', value: 65, color: '#6B7280' },
-    { name: 'النمو', value: 28, color: '#006B3F' },
-    { name: 'المؤسسات', value: 7, color: '#FFD700' }
-  ];
+  const [subscriptionData, setSubscriptionData] = useState([
+    { name: 'مجاني', value: 0, color: '#6B7280' },
+    { name: 'النمو', value: 0, color: '#006B3F' },
+    { name: 'المؤسسات', value: 0, color: '#FFD700' }
+  ]);
+
+  // Load data from Firestore
+  useEffect(() => {
+    const load = async () => {
+      try {
+        // Counts
+        const usersCol = collection(db, 'users');
+        const projectsCol = collection(db, 'projects');
+        const analysesCol = collection(db, 'analyses');
+
+        let totalUsers = 0;
+        let activeUsers = 0;
+        let totalProjects = 0;
+        let completedAnalyses = 0;
+
+        // Use getDocs().size to avoid aggregation permission issues
+        try { totalUsers = (await getDocs(usersCol)).size; } catch {}
+        try { activeUsers = (await getDocs(query(usersCol, where('status', '==', 'active')))).size; } catch {}
+        try { totalProjects = (await getDocs(projectsCol)).size; } catch {}
+        try { completedAnalyses = (await getDocs(query(analysesCol, where('status', '==', 'completed')))).size; } catch {}
+
+        setEditableData(prev => ({
+          ...prev,
+          totalUsers,
+          activeUsers,
+          totalProjects,
+          completedAnalyses
+        }));
+
+        // Recent users (last login desc)
+        try {
+          const usersQuery = query(usersCol, orderBy('lastLogin', 'desc'), limit(10));
+          const unsubPrimary = onSnapshot(usersQuery, (snap) => {
+            if (snap.empty) {
+              // Fallback to createdAt ordering if lastLogin not tracked
+              const fallback = query(usersCol, orderBy('createdAt', 'desc'), limit(10));
+              getDocs(fallback).then((fsnap) => {
+                const list = fsnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+                setRecentUsers(list);
+              }).catch(() => setRecentUsers([]));
+              return;
+            }
+            const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+            setRecentUsers(list);
+          });
+          // store cleanup
+          return () => unsubPrimary();
+        } catch {
+          try {
+            const snap = await getDocs(query(usersCol, orderBy('createdAt', 'desc'), limit(10)));
+            const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+            setRecentUsers(list);
+          } catch {
+            setRecentUsers([]);
+          }
+        }
+
+        // Subscription breakdown
+        try {
+          let free = 0, growth = 0, enterprise = 0;
+          try { free = (await getDocs(query(usersCol, where('subscription', '==', 'free')))).size; } catch {}
+          try { growth = (await getDocs(query(usersCol, where('subscription', '==', 'growth')))).size; } catch {}
+          try { enterprise = (await getDocs(query(usersCol, where('subscription', '==', 'enterprise')))).size; } catch {}
+          setSubscriptionData([
+            { name: 'مجاني', value: free, color: '#6B7280' },
+            { name: 'النمو', value: growth, color: '#006B3F' },
+            { name: 'المؤسسات', value: enterprise, color: '#FFD700' }
+          ]);
+        } catch {}
+
+        // Simple monthly metrics from projects createdAt (last 6 months)
+        try {
+          const now = new Date();
+          const months: any[] = [];
+          for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push({ key: `${d.getFullYear()}-${d.getMonth() + 1}`, name: d.toLocaleDateString('ar-SA', { month: 'long' }), users: 0, projects: 0, revenue: 0 });
+          }
+          const projSnap = await getDocs(projectsCol);
+          projSnap.forEach(docu => {
+            const data: any = docu.data();
+            const created = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null);
+            if (!created) return;
+            const key = `${created.getFullYear()}-${created.getMonth() + 1}`;
+            const bucket = months.find(m => m.key === key);
+            if (bucket) bucket.projects += 1;
+          });
+          setSystemMetrics(months);
+        } catch {
+          setSystemMetrics([]);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    const cleanup = load();
+    return () => {
+      try { (cleanup as any)?.(); } catch {}
+    };
+  }, []);
 
   const tabs = [
     { id: 'overview', title: 'نظرة عامة', icon: BarChart3 },
@@ -435,13 +492,13 @@ const AdminDashboard: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3 text-right font-almarai text-gray-700">
-                          {user.totalSpent.toLocaleString()} ريال
+                          {typeof user.totalSpent === 'number' ? user.totalSpent.toLocaleString() + ' ريال' : '-'}
                         </td>
                         <td className="p-3 text-right font-almarai text-gray-700">
                           {user.projectsCount}
                         </td>
                         <td className="p-3 text-right font-almarai text-gray-700 text-sm">
-                          {new Date(user.lastLogin).toLocaleDateString('ar-SA')}
+                          {user.lastLogin ? new Date(user.lastLogin.seconds ? user.lastLogin.seconds * 1000 : user.lastLogin).toLocaleDateString('ar-SA') : '-'}
                         </td>
                         <td className="p-3 text-right">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold ${
@@ -597,8 +654,34 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-light-green p-6">
+    <div className="min-h-screen bg-[#0B1220] p-6">
       <div className="max-w-7xl mx-auto">
+        {/* شريط علوي: بحث + أزرار إجراءات */}
+        <div className="mb-6 flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="ابحث في المستخدمين، المشاريع، التحليلات... (Ctrl+K)"
+                className="w-full pr-12 pl-4 py-3 rounded-xl bg-[#151B2B] border border-[#1E2538] text-gray-200 placeholder-gray-500 focus:outline-none focus:border-saudi-green"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="px-4 py-2 rounded-lg bg-saudi-green text-white font-almarai hover:bg-saudi-green/90 transition-colors flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              إضافة مستخدم
+            </button>
+            <button className="px-4 py-2 rounded-lg bg-[#151B2B] text-gray-200 border border-[#1E2538] font-almarai hover:border-saudi-green/60 transition-colors flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              تحديث
+            </button>
+          </div>
+        </div>
+
         {/* رأس لوحة التحكم */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -607,34 +690,34 @@ const AdminDashboard: React.FC = () => {
         >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-almarai font-bold text-gray-900 mb-2">
-                🛡️ لوحة تحكم الأدمن
+              <h1 className="text-3xl md:text-4xl font-almarai font-bold text-white mb-2">
+                لوحة تحكم الأدمن
               </h1>
-              <p className="text-gray-600 font-almarai text-lg">
-                مرحباً {user?.name}، إدارة شاملة لنظام SmartStartAI
+              <p className="text-gray-400 font-almarai text-lg">
+                مرحبا يا مدير
               </p>
               <div className="flex items-center gap-4 mt-2">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-almarai text-gray-600">النظام يعمل بشكل طبيعي</span>
+                  <span className="text-sm font-almarai text-gray-400">النظام يعمل بشكل طبيعي</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-saudi-green" />
-                  <span className="text-sm font-almarai text-gray-600">
+                  <span className="text-sm font-almarai text-gray-400">
                     {systemStats.activeUsers.toLocaleString()} مستخدم نشط
                   </span>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3">
               {quickActions.map((action, index) => (
                 <motion.button
                   key={index}
                   onClick={action.action}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-white border border-gray-200 text-gray-700 p-3 rounded-xl hover:shadow-md transition-all duration-300 flex items-center gap-2"
+                  className="bg-[#151B2B] border border-[#1E2538] text-gray-200 p-3 rounded-xl hover:border-saudi-green/60 transition-all duration-300 flex items-center gap-2"
                   title={action.title}
                 >
                   <action.icon className="h-5 w-5" />
@@ -645,8 +728,8 @@ const AdminDashboard: React.FC = () => {
         </motion.div>
 
         {/* التبويبات */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="border-b border-gray-200">
+        <div className="rounded-2xl overflow-hidden bg-[#0F1629] border border-[#1E2538] shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
+          <div className="border-b border-[#1E2538]">
             <nav className="flex overflow-x-auto">
               {tabs.map((tab) => (
                 <button
@@ -654,8 +737,8 @@ const AdminDashboard: React.FC = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-3 px-6 py-4 font-almarai whitespace-nowrap transition-all duration-300 ${
                     activeTab === tab.id
-                      ? 'border-b-3 border-saudi-green bg-light-green text-saudi-green'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'text-white bg-[#151B2B] border-b-2 border-saudi-green'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-[#151B2B]'
                   }`}
                 >
                   <tab.icon className="h-5 w-5" />

@@ -26,6 +26,7 @@ const NotificationCenter = lazy(() => import('./components/NotificationCenter'))
 const LoadingScreen = lazy(() => import('./components/LoadingScreen'));
 const Footer = lazy(() => import('./components/Footer'));
 import ErrorBoundary from './components/ErrorBoundary';
+import { useAuthClaims } from './lib/useAuthClaims';
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const AdminRoute = lazy(() => import('./components/AdminRoute'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
@@ -39,7 +40,7 @@ const AcademyPage = lazy(() => import('./components/AcademyPage'));
 
 function AppContent() {
   // Zustand stores
-  const { user, loading } = useAuthStore();
+  const { user, loading, refreshSession } = useAuthStore();
   const { projects } = useProjectsStore();
   const { currentAnalysis } = useAnalysisStore();
   const {
@@ -65,6 +66,7 @@ function AppContent() {
   } = useUIStore();
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const { user: claimsUser, claims, loading: claimsLoading, refreshClaims } = useAuthClaims();
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -74,6 +76,14 @@ function AppContent() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Ensure we always load the latest role/subscription from Firestore on app start
+  useEffect(() => {
+    refreshSession();
+    // Try to refresh claims once on boot
+    refreshClaims();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sample projects data - will be replaced with real data from store
   const sampleProjects: Project[] = [
@@ -202,7 +212,13 @@ function AppContent() {
           </ProtectedRoute>
         );
       case 'pricing':
-        return <PricingPlans />;
+        {
+          const isAdminClaim = !!(claims && (claims as any).admin === true);
+          if (!claimsLoading && claimsUser && isAdminClaim) {
+            return <AdminDashboard />;
+          }
+          return <PricingPlans />;
+        }
       case 'help':
         return <HelpCenter />;
       case 'profile':
@@ -212,6 +228,15 @@ function AppContent() {
           </ProtectedRoute>
         );
       case 'admin':
+        // Gate by custom claim admin if available; fallback to existing AdminRoute if claims not ready
+        if (!claimsLoading && claimsUser) {
+          const isAdmin = !!(claims && (claims as any).admin === true);
+          return isAdmin ? <AdminDashboard /> : (
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          );
+        }
         return (
           <AdminRoute>
             <AdminDashboard />

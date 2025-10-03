@@ -8,7 +8,7 @@
   "license": "LicenseRef-SmartStartAI-Proprietary",
   "repository": {
     "type": "git",
-    "url": "https://github.com/smartstart-ai/hoor-system.git"
+    "url": "git+https://github.com/smartstart-ai/hoor-system.git"
   },
   "homepage": "https://www.smartstart-ai.net",
   "keywords": [
@@ -46,6 +46,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "firebase": "^12.3.0",
+    "firebase-admin": "^13.5.0",
     "framer-motion": "^12.23.12",
     "gray-matter": "^4.0.3",
     "js-cookie": "^3.0.5",
@@ -78,5 +79,9 @@
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.3.0",
     "vite": "^7.1.7"
+  },
+  "main": "eslint.config.js",
+  "bugs": {
+    "url": "https://github.com/smartstart-ai/hoor-system/issues"
   }
 }

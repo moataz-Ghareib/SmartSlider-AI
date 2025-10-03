@@ -27,6 +27,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useUIStore } from '../stores';
 import { 
   BarChart, 
   Bar, 
@@ -52,6 +53,7 @@ interface SectorPageProps {
 const SectorPage: React.FC<SectorPageProps> = ({ sectorName, onBack }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
+  const { setCurrentView } = useUIStore();
 
   useEffect(() => {
     // محاكاة تحميل البيانات
@@ -608,11 +610,7 @@ const SectorPage: React.FC<SectorPageProps> = ({ sectorName, onBack }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.hash = 'flow';
-                }
-              }}
+              onClick={() => setCurrentView('flow')}
               className="bg-gradient-to-r from-saudi-green to-saudi-gold text-white px-8 py-4 rounded-xl font-almarai font-bold hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
             >
               <FileText className="h-5 w-5" />
@@ -622,11 +620,7 @@ const SectorPage: React.FC<SectorPageProps> = ({ sectorName, onBack }) => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.hash = 'help';
-                }
-              }}
+              onClick={() => setCurrentView('help')}
               className="bg-white border-2 border-saudi-green text-saudi-green px-8 py-4 rounded-xl font-almarai font-bold hover:bg-light-green transition-all duration-300 flex items-center justify-center gap-2"
             >
               <Phone className="h-5 w-5" />

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, User, Settings, Bell, Search, LogIn, ChevronDown, LogOut, Shield, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '../stores';
-import { useUIStore } from '../stores';
 import { motion, AnimatePresence } from 'framer-motion';
 import DarkModeToggle from './DarkModeToggle';
 import VoicePersistentToggle from './VoicePersistentToggle';
@@ -29,8 +28,16 @@ const Header: React.FC<HeaderProps> = ({
   const [notificationCount] = useState(3);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { voiceEnabled, toggleVoiceEnabled } = useUIStore();
   const { user, signOut } = useAuthStore();
+  const isAdmin = !!(
+    user && (
+      user.role === 'admin' ||
+      user.subscription_type === 'enterprise' ||
+      user.email?.includes('admin') ||
+      user.email === 'admin@smartstart.sa' ||
+      user.email === 'demo@smartstart.sa'
+    )
+  );
 
   const navItems = [
     { id: 'home', label: 'الرئيسية', active: currentView === 'home' },
@@ -62,16 +69,6 @@ const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const toggleVoice = async () => {
-    const next = !voiceEnabled;
-    toggleVoiceEnabled();
-    try {
-      const { analytics } = await import('../lib/analytics');
-      analytics.trackVoiceToggle(next);
-    } catch (error) {
-      console.warn('Analytics tracking failed:', error);
-    }
-  };
 
   const handleSearch = (term: string) => {
     if (term.trim()) {
@@ -95,9 +92,11 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className={`${isDarkMode ? 'bg-gray-900/95 border-gray-700' : 'bg-white/95 border-gray-100'} backdrop-blur-md shadow-sm border-b sticky top-0 z-50`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo والعنوان */}
-          <div className="flex items-center space-x-reverse space-x-4">
+        <div className="flex items-center h-20">
+          {/* Left: Logo + Nav (fixed gap) */}
+          <div className="flex items-center gap-20">
+            {/* Logo والعنوان */}
+            <div className="flex items-center space-x-reverse space-x-4">
             <button
               onClick={onMenuToggle}
               className={`p-2 rounded-xl text-saudi-green hover:bg-light-green transition-colors lg:hidden ${isDarkMode ? 'hover:bg-gray-700' : ''}`}
@@ -105,25 +104,20 @@ const Header: React.FC<HeaderProps> = ({
               <Menu className="h-6 w-6" />
             </button>
             
-            <div className="cursor-pointer flex items-center gap-3 ml-4" onClick={() => onViewChange('home')}>
+            <div className="cursor-pointer flex items-center ml-4" onClick={() => onViewChange('home')}>
               {/* Replace SVG logo with PNG logo */}
               <img 
                 src="/smartstartai_final_logo.png" 
                 alt="SmartStartAI Logo" 
                 className="h-10 w-10 rounded-xl shadow-sm"
               />
-              <div>
-                <h1 className={`text-xl font-almarai font-bold text-transparent bg-clip-text bg-gradient-to-l from-saudi-green to-saudi-gold`}>
-                  SmartStartAI
-                </h1>
-                
-              </div>
             </div>
-          </div>
 
-          {/* شريط التنقل */}
-          <nav className="hidden lg:flex items-center space-x-reverse space-x-8">
-            {navItems.map((item) => {
+            {/* شريط التنقل */}
+            <nav className="hidden lg:flex items-center space-x-reverse space-x-8">
+              {navItems
+                .filter((item) => !(isAdmin && item.id === 'pricing'))
+                .map((item) => {
               // إخفاء العناصر التي تتطلب تسجيل دخول إذا لم يكن المستخدم مسجلاً
               if (item.requireAuth && !user) return null;
               
@@ -151,12 +145,14 @@ const Header: React.FC<HeaderProps> = ({
                     />
                   )}
                 </a>
-              );
-            })}
-          </nav>
+                );
+              })}
+            </nav>
+            </div>
+          </div>
 
           {/* أدوات المستخدم */}
-          <div className="flex items-center space-x-reverse space-x-4">
+          <div className="flex items-center space-x-reverse space-x-4 ml-auto">
             {/* البحث */}
             <div className="search-container relative">
               <button
@@ -248,29 +244,18 @@ const Header: React.FC<HeaderProps> = ({
                   <ChevronDown className={`h-4 w-4 text-gray-600 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                   <div className="hidden md:block text-right">
                     <p className="font-almarai font-bold text-gray-800 text-sm">
-                      {user.name}
+                      {isAdmin ? 'المدير' : user.name}
                     </p>
-                    <p className="font-almarai text-gray-600 text-xs">
-                      باقة {user.subscription_type === 'free' ? 'مجانية' : 
-                            user.subscription_type === 'growth' ? 'النمو' : 'المؤسسات'}
-                      {user.auth_provider && user.auth_provider !== 'email' && (
-                        <span className="mr-1">
-                          {user.auth_provider === 'google' ? '🔗 Google' : '🔗 Apple'}
-                        </span>
-                      )}
-                    </p>
+                    {!isAdmin && (
+                      <p className="font-almarai text-gray-600 text-xs">
+                        باقة {user.subscription_type === 'free' ? 'مجانية' : 
+                              user.subscription_type === 'growth' ? 'النمو' : 'المؤسسات'}
+                      </p>
+                    )}
                   </div>
-                  {user.avatar_url ? (
-                    <img 
-                      src={user.avatar_url} 
-                      alt={user.name}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-saudi-green"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-saudi-green flex items-center justify-center text-white font-bold text-sm">
-                      {user.email.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <div className="w-8 h-8 rounded-full bg-saudi-green flex items-center justify-center text-white font-bold text-sm">
+                    {isAdmin ? 'م' : user.email.charAt(0).toUpperCase()}
+                  </div>
                 </button>
 
                 {/* قائمة المستخدم المنسدلة */}
@@ -296,7 +281,6 @@ const Header: React.FC<HeaderProps> = ({
                       {[
                         { id: 'profile', label: 'الملف الشخصي', icon: User },
                         { id: 'dashboard', label: 'مشاريعي', icon: BarChart3 },
-                        { id: 'settings', label: 'الإعدادات', icon: Settings },
                         ...(user?.role === 'admin' || user?.subscription_type === 'enterprise' || user?.email?.includes('admin') ? 
                           [{ id: 'admin', label: 'لوحة الأدمن', icon: Shield }] : [])
                       ].map((item) => (
@@ -310,9 +294,6 @@ const Header: React.FC<HeaderProps> = ({
                                 break;
                               case 'dashboard':
                                 onViewChange('dashboard');
-                                break;
-                              case 'settings':
-                                onViewChange('profile');
                                 break;
                               case 'profile':
                               default:
@@ -354,7 +335,7 @@ const Header: React.FC<HeaderProps> = ({
             )}
           </div>
         </div>
-        </div>
+      </div>
     </header>
   );
 };
